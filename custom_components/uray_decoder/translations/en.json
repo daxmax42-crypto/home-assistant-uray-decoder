@@ -24,7 +24,9 @@
     "error": {
       "auth_failed": "Authentication failed. Check HTTP credentials.",
       "cannot_connect": "Cannot connect to the decoder. Check host/port.",
+      "device_error": "Decoder returned an error. Check the device logs.",
       "go2rtc_cannot_connect": "Decoder OK but go2rtc at the given URL is unreachable.",
+      "scenes_invalid": "Scenes JSON is invalid. Must be a JSON list of scene objects.",
       "unknown": "Unexpected error during setup."
     },
     "abort": {
