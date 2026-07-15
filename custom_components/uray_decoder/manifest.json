@@ -1,0 +1,14 @@
+{
+  "domain": "uray_decoder",
+  "name": "Uray Quad Decoder",
+  "codeowners": ["@daxmax42-crypto"],
+  "config_flow": true,
+  "documentation": "https://github.com/daxmax42-crypto/home-assistant-repo",
+  "requirements": [],
+  "version": "1.0.0",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/daxmax42-crypto/home-assistant-repo/issues",
+  "homekit": {},
+  "dependencies": [],
+  "after_dependencies": []
+}

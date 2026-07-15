@@ -1,0 +1,43 @@
+apply_scene:
+  name: Apply Scene
+  description: Switch the Uray quad decoder to a named scene preset (quad layout or single full-screen).
+  fields:
+    scene:
+      name: Scene
+      description: Name of the scene preset defined in the integration config.
+      required: true
+      selector:
+        text:
+
+set_channel:
+  name: Set Channel Stream
+  description: Set one channel slot of the decoder to a direct RTSP URI or a go2rtc stream name (keeps the other three from the current quad baseline).
+  fields:
+    channel:
+      name: Channel
+      description: Channel number 1-4.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+    uri:
+      name: RTSP URI
+      description: Direct RTSP URL for the channel.
+      required: false
+      selector:
+        text:
+    stream_name:
+      name: go2rtc Stream Name
+      description: A go2rtc stream name (resolved to its restream URL).
+      required: false
+      selector:
+        text:
+    audio:
+      name: Audio
+      description: Enable audio on this channel (0 or 1).
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 1

@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Uray Quad Decoder",
+        "description": "Connect to a Uray UHCVD265-1-4K quad video decoder.",
+        "data": {
+          "host": "Host",
+          "username": "HTTP Username",
+          "password": "HTTP Password",
+          "port": "HTTP Port",
+          "telnet_username": "Telnet Username",
+          "telnet_password": "Telnet Password"
+        }
+      },
+      "scenes": {
+        "title": "Scene Presets",
+        "description": "Define scene presets. Each scene has a name, a layout (wnd: 1 = single full-screen, 4 = quad), and per-channel (ch0-ch3) stream definitions. Leave empty to skip voice scenes and use only the 4 channel selects.",
+        "data": {
+          "scenes": "Scenes"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed. Check HTTP credentials.",
+      "cannot_connect": "Cannot connect to the decoder. Check host/port.",
+      "go2rtc_cannot_connect": "Decoder OK but go2rtc at the given URL is unreachable.",
+      "unknown": "Unexpected error during setup."
+    },
+    "abort": {
+      "already_configured": "This decoder is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Uray Quad Decoder Options",
+        "description": "Adjust connection settings."
+      }
+    }
+  }
+}
