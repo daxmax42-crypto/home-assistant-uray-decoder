@@ -172,16 +172,54 @@ class UrayActiveSceneSensor(_Base):
 
 
 class UrayNetStatusSensor(_Base):
+    """Decoder stream-liveness, derived from actual per-channel `alive` flags.
+
+    The device's own `net_status` field is unreliable (reports Offline even while all
+    streams decode), so this sensor reports real liveness instead: how many of the
+    configured windows are actually receiving frames. Descriptive states:
+      - "All Streams Live"  (every window alive)
+      - "Degraded (N/4)"    (some but not all alive)
+      - "All Streams Down"  (none alive)
+    """
+
     def __init__(self, c, e):
-        super().__init__(c, e, "net_status", "Network Status")
+        super().__init__(c, e, "stream_liveness", "Stream Liveness")
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_device_class = SensorDeviceClass.ENUM
-        self._attr_options = ["Online", "Offline"]
+        self._attr_options = [
+            "All Streams Live",
+            "Degraded",
+            "All Streams Down",
+        ]
+        self._attr_icon = "mdi:video-wireless"
 
     @property
     def native_value(self):
-        v = (self.coordinator.data or {}).get("net_status")
-        return "Online" if v == 1 else "Offline"
+        streams = (self.coordinator.data or {}).get("streams") or []
+        total = len(streams)
+        alive = sum(1 for s in streams if s.get("alive") == 1)
+        if total == 0:
+            return "All Streams Down"
+        if alive == total:
+            return "All Streams Live"
+        if alive == 0:
+            return "All Streams Down"
+        return "Degraded"
+
+    @property
+    def extra_state_attributes(self):
+        streams = (self.coordinator.data or {}).get("streams") or []
+        down = [
+            i
+            for i, s in enumerate(streams)
+            if s.get("alive") != 1
+        ]
+        return {
+            "windows_total": len(streams),
+            "windows_alive": sum(1 for s in streams if s.get("alive") == 1),
+            "windows_down": down,
+            "device_net_status": (self.coordinator.data or {}).get("net_status"),
+        }
 
 
 class UrayVerifyMatchSensor(_Base):
