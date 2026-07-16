@@ -7,7 +7,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfInformation, UnitOfPower
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -25,6 +25,31 @@ from .const import (
 from .coordinator import UrayDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+# Unit constants were renamed/removed across HA versions:
+#   UnitOfInformation.KIBIBYTES -> KILOBYTES (removed in 2025.1)
+#   UnitOfPower.PERCENTAGE still exists but guard for safety.
+# Resolve to the literal string HA stores (enums are just str subclasses), so the
+# module imports cleanly on any 2024.x+ core version.
+def _resolve_unit(cls_name, old_attr, new_attr, fallback):
+    try:
+        import homeassistant.const as _c
+        _cls = getattr(_c, cls_name)
+        for _attr in (new_attr, old_attr):
+            if hasattr(_cls, _attr):
+                return getattr(_cls, _attr)
+    except Exception:  # noqa: BLE001
+        pass
+    return fallback
+
+UNIT_PERCENTAGE = _resolve_unit("UnitOfPower", "PERCENTAGE", "PERCENTAGE", "%")
+UNIT_KIBIBYTES = _resolve_unit("UnitOfInformation", "KIBIBYTES", "KILOBYTES", "KiB")
+# SensorStateClass.MEASUREMENT removed in 2025.1; it is just the string "measurement".
+try:
+    from homeassistant.components.sensor import SensorStateClass
+    STATE_MEASUREMENT = getattr(SensorStateClass, "MEASUREMENT", "measurement")
+except Exception:  # noqa: BLE001
+    STATE_MEASUREMENT = "measurement"
 
 
 async def async_setup_entry(
@@ -87,8 +112,8 @@ class UrayCPUSensor(_Base):
     def __init__(self, c, e):
         super().__init__(c, e, "cpu_usage", "CPU Usage")
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_native_unit_of_measurement = UnitOfPower.PERCENTAGE
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = UNIT_PERCENTAGE
+        self._attr_state_class = STATE_MEASUREMENT
         self._attr_icon = "mdi:cpu-64-bit"
 
     @property
@@ -100,8 +125,8 @@ class UrayMemFreeSensor(_Base):
     def __init__(self, c, e):
         super().__init__(c, e, "mem_free", "Memory Free")
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_native_unit_of_measurement = UnitOfInformation.KIBIBYTES
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = UNIT_KIBIBYTES
+        self._attr_state_class = STATE_MEASUREMENT
         self._attr_icon = "mdi:memory"
 
     @property
@@ -205,7 +230,7 @@ class UrayStreamFpsSensor(_Base):
         super().__init__(c, e, f"stream{idx}_fps", f"Stream {idx} FPS")
         self._idx = idx
         self._attr_native_unit_of_measurement = "fps"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_state_class = STATE_MEASUREMENT
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
@@ -222,7 +247,7 @@ class UrayStreamBpsSensor(_Base):
         super().__init__(c, e, f"stream{idx}_bps", f"Stream {idx} Bitrate")
         self._idx = idx
         self._attr_native_unit_of_measurement = "kbps"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_state_class = STATE_MEASUREMENT
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
@@ -239,7 +264,7 @@ class UrayUptimeSensor(_Base):
         super().__init__(c, e, "days_since_boot", "Days Since Boot")
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_native_unit_of_measurement = "d"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_state_class = STATE_MEASUREMENT
         self._attr_icon = "mdi:clock-outline"
 
     @property
