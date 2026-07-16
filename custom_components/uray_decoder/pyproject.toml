@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "uray_decoder"
-version = "1.0.0"
-description = "Home Assistant custom integration for the Uray UHCVD265-1-4K quad video decoder"
+version = "1.0.2"
+description = "Home Assistant integration for the Uray UHCVD265-1-4K quad video decoder"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "daxmax42-crypto" }]
 
 [tool.setuptools]
-packages = ["custom_components.uray_decoder"]
+packages = ["uray_decoder"]
