@@ -106,6 +106,8 @@ class UrayDataUpdateCoordinator(DataUpdateCoordinator):
         self._streams_cache: dict[str, Any] = {}
         # Lazy one-shot first-load seed flag
         self._seeded = False
+        # Last observed uptime day (for reboot detection across polls)
+        self._last_boot_days: int | None = None
 
         super().__init__(
             hass,
@@ -138,6 +140,19 @@ class UrayDataUpdateCoordinator(DataUpdateCoordinator):
         status["active_scene"] = self._active_scene
         status["streams_go2rtc"] = sorted(self._streams_cache.keys())
         status["quad_baseline"] = self._quad_baseline
+        # Uptime + reboot detection (derived from /get_status runtime, zero extra cost).
+        # runtime format: "0000-00-DD HH:MM:SS" — DD is days since boot. The full string
+        # advances with wall-clock, so only the day field indicates a reboot (drops to 0).
+        runtime = status.get("runtime") or ""
+        days = _parse_runtime_days(runtime)
+        status["days_since_boot"] = days
+        if days is not None:
+            if self._last_boot_days is not None and days < self._last_boot_days:
+                status["reboot_detected"] = True
+                _LOGGER.warning("Decoder reboot detected (uptime day dropped %s -> %s)", self._last_boot_days, days)
+            else:
+                status["reboot_detected"] = False
+            self._last_boot_days = days
         return status
 
     # ---- go2rtc refresh (called by background task) ----
@@ -294,6 +309,68 @@ class UrayDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_refresh_streams(self) -> None:
         await self.async_refresh_go2rtc()
 
+    async def async_deep_diagnostic(self) -> dict[str, Any]:
+        """On-demand decode-error diagnostic via telnet /proc/umap/vdec.
+
+        NOT polled (telnet is a shared console; polling it would contend with control).
+        Trigger manually or on a schedule. Parses the CHN STATE table for per-channel
+        StrmError / StrmUnSP counts — the black-window root-cause signature (Reolink
+        sub-stream pacing on s1/s2 historically: ch1/ch2 accumulate errors vs ch0/ch3).
+        Returns {channels:[{index,strm_error,strm_unsp}], raw: <snippet>}.
+        """
+        async with self.client._telnet_lock:
+            try:
+                await self.client.telnet.connect()
+                try:
+                    raw = await self.client.telnet.run("cat /proc/umap/vdec")
+                finally:
+                    await self.client.telnet.close()
+            except OSError as err:
+                _LOGGER.error("Deep diagnostic telnet failed: %s", err)
+                return {"channels": [], "raw": None, "error": str(err)}
+
+        channels: list[dict[str, Any]] = []
+        # CHN STATE table format (from live /proc/umap/vdec):
+        #   "-----CHN STATE-----"
+        #   "  ID  PrtclErr  StrmUnSP StrmError RefNumErr ..."   (header, non-digit)
+        #   "   0    0         0        1        0 ..."          (data rows, leading-space + digit)
+        # Column 0 = channel ID, 2 = StrmUnSP, 3 = StrmError. The data block ends at the
+        # first blank line OR the next section header after we've seen a data row.
+        # NOTE: the header row itself is non-digit, so we must not break on it — only
+        # break on a non-digit line once at least one data row has been captured.
+        in_chn = False
+        seen_data = False
+        for line in (raw or "").splitlines():
+            s = line.strip()
+            if "CHN STATE" in s:
+                in_chn = True
+                continue
+            if in_chn:
+                if not s:
+                    if seen_data:
+                        break
+                    continue
+                if s[:1].isdigit():
+                    parts = s.split()
+                    try:
+                        channels.append(
+                            {
+                                "index": int(parts[0]),
+                                "strm_unsp": int(parts[2]) if len(parts) > 2 else 0,
+                                "strm_error": int(parts[3]) if len(parts) > 3 else 0,
+                            }
+                        )
+                        seen_data = True
+                    except (ValueError, IndexError):
+                        break
+                elif seen_data:
+                    # Non-digit line after data => next section. Stop.
+                    break
+                # else: header row or other pre-data line -> keep scanning
+        result = {"channels": channels, "raw": (raw or "")[:4000], "error": None}
+        self._push(deep_diagnostic=result)
+        return result
+
     async def async_verify_state(self) -> dict[str, Any]:
         """Cross-check the API-reported playlist against the on-disk config (truth)."""
         try:
@@ -320,3 +397,25 @@ class UrayDataUpdateCoordinator(DataUpdateCoordinator):
 def _uri_host_path(u: str) -> str:
     """Compare two RTSP URLs ignoring embedded credentials."""
     return __import__("re").sub(r"//[^@/]+@", "//", (u or "").strip())
+
+
+def _parse_runtime_days(runtime: str) -> int | None:
+    """Extract days-since-boot from the runtime string '0000-00-DD HH:MM:SS'.
+
+    Only the day field (DD) is meaningful for reboot detection; the rest is wall-clock.
+    Returns the integer day, or None if the format is unrecognized.
+    """
+    if not runtime:
+        return None
+    # Split on whitespace; the date portion is "0000-00-DD".
+    parts = runtime.strip().split()
+    if not parts:
+        return None
+    date_part = parts[0]
+    segs = date_part.split("-")
+    if len(segs) != 3:
+        return None
+    try:
+        return int(segs[2])
+    except ValueError:
+        return None

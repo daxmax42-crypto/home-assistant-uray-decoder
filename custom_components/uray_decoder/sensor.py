@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfInformation, UnitOfPower
 from homeassistant.core import HomeAssistant
@@ -42,6 +43,8 @@ async def async_setup_entry(
         UrayActiveSceneSensor(coordinator, entry),
         UrayNetStatusSensor(coordinator, entry),
         UrayVerifyMatchSensor(coordinator, entry),
+        UrayUptimeSensor(coordinator, entry),
+        UrayRebootBinarySensor(coordinator, entry),
     ]
     for i in range(WINDOW_COUNT):
         entities.append(UrayStreamAliveSensor(coordinator, entry, i))
@@ -231,3 +234,28 @@ class UrayStreamBpsSensor(_Base):
         if self._idx < len(streams):
             return streams[self._idx].get("bps")
         return None
+
+
+class UrayUptimeSensor(_Base):
+    def __init__(self, c, e):
+        super().__init__(c, e, "days_since_boot", "Days Since Boot")
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_native_unit_of_measurement = "d"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_icon = "mdi:clock-outline"
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get("days_since_boot")
+
+
+class UrayRebootBinarySensor(_Base, BinarySensorEntity):
+    def __init__(self, c, e):
+        super().__init__(c, e, "reboot_detected", "Reboot Detected")
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
+        self._attr_icon = "mdi:restart-alert"
+
+    @property
+    def is_on(self):
+        return bool((self.coordinator.data or {}).get("reboot_detected"))

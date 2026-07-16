@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -29,6 +30,7 @@ async def async_setup_entry(
             UrayRefreshButton(coordinator, entry),
             UrayRefreshStreamsButton(coordinator, entry),
             UrayVerifyButton(coordinator, entry),
+            UrayDeepDiagButton(coordinator, entry),
         ]
     )
 
@@ -76,3 +78,14 @@ class UrayVerifyButton(_Base):
         result = await self.coordinator.async_verify_state()
         # Stash match result so the verify-match sensor reflects it.
         self.coordinator._last_verify_match = result.get("match")
+
+
+class UrayDeepDiagButton(_Base):
+    def __init__(self, c, e):
+        super().__init__(c, e, "deep_diagnostic", "Deep Diagnostic (vdec)")
+        self._attr_icon = "mdi:bug-outline"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    async def async_press(self) -> None:
+        # On-demand telnet /proc/umap/vdec decode-error parse. Not polled.
+        await self.coordinator.async_deep_diagnostic()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "uray_decoder"
-version = "1.0.2"
+version = "1.0.3"
 description = "Home Assistant integration for the Uray UHCVD265-1-4K quad video decoder"
 readme = "README.md"
 requires-python = ">=3.11"

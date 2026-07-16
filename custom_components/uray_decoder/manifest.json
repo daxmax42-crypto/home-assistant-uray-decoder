@@ -5,7 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/daxmax42-crypto/home-assistant-uray-decoder",
   "requirements": [],
-  "version": "1.0.2",
+  "version": "1.0.3",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/daxmax42-crypto/home-assistant-uray-decoder/issues",
   "homekit": {},
