@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
-from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfInformation, UnitOfPower
 from homeassistant.core import HomeAssistant
@@ -44,7 +43,6 @@ async def async_setup_entry(
         UrayNetStatusSensor(coordinator, entry),
         UrayVerifyMatchSensor(coordinator, entry),
         UrayUptimeSensor(coordinator, entry),
-        UrayRebootBinarySensor(coordinator, entry),
     ]
     for i in range(WINDOW_COUNT):
         entities.append(UrayStreamAliveSensor(coordinator, entry, i))
@@ -249,13 +247,6 @@ class UrayUptimeSensor(_Base):
         return (self.coordinator.data or {}).get("days_since_boot")
 
 
-class UrayRebootBinarySensor(_Base, BinarySensorEntity):
-    def __init__(self, c, e):
-        super().__init__(c, e, "reboot_detected", "Reboot Detected")
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_icon = "mdi:restart-alert"
-
-    @property
-    def is_on(self):
-        return bool((self.coordinator.data or {}).get("reboot_detected"))
+class UrayRebootBinarySensor:
+    """Moved to binary_sensor.py — see note there. HA 2026.x rejects a SensorEntity +
+    BinarySensorEntity mix in the sensor platform (aborts the whole platform)."""

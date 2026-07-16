@@ -5,9 +5,16 @@
   "config_flow": true,
   "documentation": "https://github.com/daxmax42-crypto/home-assistant-uray-decoder",
   "requirements": [],
-  "version": "1.0.3",
+  "version": "1.0.4",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/daxmax42-crypto/home-assistant-uray-decoder/issues",
+  "platforms": [
+    "sensor",
+    "binary_sensor",
+    "select",
+    "button",
+    "media_player"
+  ],
   "homekit": {},
   "dependencies": [],
   "after_dependencies": []

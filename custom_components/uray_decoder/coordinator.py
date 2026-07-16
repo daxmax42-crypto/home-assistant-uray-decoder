@@ -387,6 +387,7 @@ class UrayDataUpdateCoordinator(DataUpdateCoordinator):
                 _uri_host_path(a) == _uri_host_path(b)
                 for a, b in zip(api_uris, disk_uris)
             )
+        self._last_verify_match = match
         self._push()
         return {"api": api_playlist, "disk": disk, "match": match}
 
